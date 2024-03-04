@@ -85,3 +85,50 @@ class ConvNet(nn.Module):
                     nn.init.constant_(module.bias, 0)
     
 
+class LSTMModel(nn.Module):
+    def __init__(self, input_size=1000, hidden_size=128, output_size=4, num_layers=3):
+        super(LSTMModel, self).__init__()
+        
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        
+        self.lstm1 = nn.LSTM(input_size, hidden_size, num_layers=1, batch_first=True)
+        self.bn1 = nn.BatchNorm1d(hidden_size)  
+        
+        self.lstm2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
+        self.bn2 = nn.BatchNorm1d(hidden_size)  
+        
+        self.lstm3 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
+        self.bn3 = nn.BatchNorm1d(hidden_size)  
+        
+        self.dropout = nn.Dropout(DROPOUT)
+        
+        self.fc = nn.Linear(hidden_size, output_size)
+    
+    def forward(self, x):
+        h0 = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
+        
+        out, _ = self.lstm1(x, (h0, c0))
+        out = self._permute(out)
+        out = self.bn1(out)
+        out = self._permute(out)
+        
+        out, _ = self.lstm2(out, (h0, c0))
+        out = self._permute(out)
+        out = self.bn2(out)
+        out = self._permute(out)
+        
+        out = self.dropout(out)
+        
+        out, _ = self.lstm3(out, (h0, c0))
+        out = self._permute(out)
+        out = self.bn3(out)
+        out = self._permute(out)
+        
+        out = self.fc(out[:, -1, :])
+        
+        return out
+    
+    def _permute(self, out):
+        return out.permute(0, 2, 1)
