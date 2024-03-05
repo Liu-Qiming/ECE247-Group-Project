@@ -7,66 +7,44 @@ class ConvNet(nn.Module):
     def __init__(self):
         super(ConvNet, self).__init__()
         self.conv_layers = nn.Sequential(
-            nn.Conv1d(22, 64, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(64, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Conv2d(1, 20, kernel_size=(3,3), stride=(1,1), padding=0),
+            nn.BatchNorm2d(20, eps=1e-06, momentum=0.2, affine=True),  
             nn.ELU(),
 
-            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(128, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Conv2d(20, 25, kernel_size=(3,3), stride=(1,1), padding=0),
+            nn.BatchNorm2d(25, eps=1e-06, momentum=0.2, affine=True),  
             nn.ELU(),
 
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(128, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Conv2d(25, 25, kernel_size=(3,3), stride=(1,1), padding=0),
+            nn.BatchNorm2d(25, eps=1e-06, momentum=0.2, affine=True),  
             nn.ELU(),
-            nn.Dropout(DROPOUT),  
-
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(128, eps=1e-06, momentum=0.2, affine=True),  
-            nn.ELU(),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-            nn.Dropout(DROPOUT),  
-
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(128, eps=1e-06, momentum=0.2, affine=True),  
-            nn.ELU(),
-            nn.Dropout(DROPOUT),  
-
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(128, eps=1e-06, momentum=0.2, affine=True),  
-            nn.ELU(),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-            nn.Dropout(DROPOUT),  
-
-            nn.Conv1d(128, 64, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(64, eps=1e-06, momentum=0.2, affine=True),  
-            nn.ELU(),
-            nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.MaxPool2d(kernel_size=(1,3), stride=(1,3)),
             nn.Dropout(DROPOUT),  
             
-            nn.Conv1d(64, 22, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm1d(22, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Conv2d(25, 22, kernel_size=(3,3), stride=(1,1), padding=0),
+            nn.BatchNorm2d(22, eps=1e-06, momentum=0.2, affine=True),  
             nn.ELU(),
         )
 
-        self.flattened_feature_nums = 22 * 120
+        self.flattened_feature_nums = 101332
         
         self.fc = nn.Sequential(
-            nn.Linear(self.flattened_feature_nums, 512),
-            nn.BatchNorm1d(512, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Linear(self.flattened_feature_nums, 64),
+            nn.BatchNorm1d(64, eps=1e-06, momentum=0.2, affine=True),  
             nn.ReLU(inplace=True),
             nn.Dropout(DROPOUT),
             
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Linear(64, 32),
+            nn.BatchNorm1d(32, eps=1e-06, momentum=0.2, affine=True),  
             nn.ReLU(inplace=True),
             nn.Dropout(DROPOUT),
 
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128, eps=1e-06, momentum=0.2, affine=True),  
+            nn.Linear(32, 16),
+            nn.BatchNorm1d(16, eps=1e-06, momentum=0.2, affine=True),  
             nn.ReLU(inplace=True),
             nn.Dropout(DROPOUT),
 
-            nn.Linear(128, 4)  
+            nn.Linear(16, 4)  
         )
         
         self._initialize_weights()
@@ -79,7 +57,7 @@ class ConvNet(nn.Module):
 
     def _initialize_weights(self):
         for module in self.modules():
-            if isinstance(module, (nn.Conv1d, nn.Linear)):
+            if isinstance(module, (nn.Conv2d, nn.Linear)):
                 nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
