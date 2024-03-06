@@ -167,8 +167,13 @@ class UltimateConvNet(nn.Module):
             nn.ELU(),
             nn.BatchNorm1d(64),
             nn.Dropout(DROPOUT),
-
-            nn.Linear(64, 4)
+            
+            nn.Linear(64, 32),
+            nn.ELU(),
+            nn.BatchNorm1d(32),
+            nn.Dropout(DROPOUT),
+            
+            nn.Linear(32, 4)
         )
 
     def forward(self, x):
