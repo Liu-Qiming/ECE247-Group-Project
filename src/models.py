@@ -160,7 +160,7 @@ class UltimateConvNet(nn.Module):
 
         self.flatten = nn.Flatten()
 
-        self.flattened_feature_nums = 1792
+        self.flattened_feature_nums = 768
 
         self.fc_layers = nn.Sequential(
             nn.Linear(self.flattened_feature_nums, 64),
