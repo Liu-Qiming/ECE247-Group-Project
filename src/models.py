@@ -131,3 +131,55 @@ class CNN_LSTM(nn.Module):
             elif isinstance(module, nn.LazyLinear):
                 nn.init.kaiming_normal_(module.weight, mode='fan_in', nonlinearity='relu')
                 nn.init.constant_(module.bias, 0)
+
+
+
+class UltimateConvNet(nn.Module):
+    def __init__(self, input_shape=(1, 22, 1000)):
+        super(UltimateConvNet, self).__init__()
+        self.input_shape = input_shape
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(1, 8, kernel_size=(1, 32), stride=(1, 1)),
+            nn.BatchNorm2d(8),
+
+            nn.Conv2d(8, 32, kernel_size=(22, 1), stride=(1, 1)),
+            nn.BatchNorm2d(32),
+
+            nn.ELU(),
+            nn.AvgPool2d((1, 6), stride = (1, 6)),
+            nn.Dropout(DROPOUT),
+
+            nn.Conv2d(32, 32, kernel_size=(1, 16), stride=(1, 1)),
+            nn.BatchNorm2d(32),
+            nn.ELU(),
+            
+
+            nn.AvgPool2d((1, 6), stride = (1, 6)),
+            nn.Dropout(DROPOUT),
+        )
+
+        self.flatten = nn.Flatten()
+
+        self.flattened_feature_nums = 1792
+
+        self.fc_layers = nn.Sequential(
+            nn.Linear(self.flattened_feature_nums, 64),
+            nn.ELU(),
+            nn.BatchNorm1d(64),
+            nn.Dropout(DROPOUT),
+
+            nn.Linear(64, 4)
+        )
+
+    def forward(self, x):
+        x = self.conv_layers(x)
+        x = self.flatten(x)
+        x = self.fc_layers(x)
+        return x
+
+    def _initialize_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0)
