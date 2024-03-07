@@ -1,11 +1,10 @@
 import torch
 from torch import nn
 from tqdm import tqdm
-
-def train(model, train_loader, valid_loader, criterion, optimizer, device, print_every=10, epochs=20, patience=20):
+from torch.utils.tensorboard import SummaryWriter
+def train(model, train_loader, valid_loader, criterion, optimizer, device, writer, print_every=10, epochs=20, patience=20):
     cur_val_max = float('inf')
     tol = 0
-
     for epoch in tqdm(range(epochs)):
         model.train()
         running_loss = 0.0
@@ -28,11 +27,14 @@ def train(model, train_loader, valid_loader, criterion, optimizer, device, print
                 val_loss += loss.item() * X.size(0)
 
         cur_val_mean_loss = val_loss / len(valid_loader.dataset)
+        avg_loss = running_loss / len(train_loader.dataset)
+        val_accuracy = evaluate(model, valid_loader, device)
 
         if (epoch + 1) % print_every == 0:
-            avg_loss = running_loss / len(train_loader.dataset)
-            val_accuracy = evaluate(model, valid_loader, device)
             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%')
+
+        writer.add_scalar('Loss/train', avg_loss, epoch)
+        writer.add_scalar('Accuracy/validation', val_accuracy, epoch)
 
         if cur_val_mean_loss < cur_val_max:
             cur_val_max = cur_val_mean_loss
