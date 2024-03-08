@@ -67,3 +67,15 @@ self.conv_layers = nn.Sequential(
         )
 ```
 ACC: 45.6%
+
+## VisionTransformer with one convlayer, one 2-layer tranformer and one projection head, train with 70 epoch
+```python
+
+    self.patch_embedding = nn.Conv2d(1, 64, kernel_size=(22,1), stride=(22,1))
+    self.cls_token = nn.Parameter(torch.randn(1, 1, 64)*1)
+    self.projection = nn.Linear(64, 4)
+    self.transformer = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=64, nhead=8), num_layers=2)
+    self.positions = nn.Parameter(torch.randn(1001, 64))
+
+optimizer = torch.optim.Adam(ult_cnn.parameters(), lr = 0.001, betas=(0.9, 0.99), eps=1e-6, weight_decay=0.0005)
+```

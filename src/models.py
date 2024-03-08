@@ -188,3 +188,32 @@ class UltimateConvNet(nn.Module):
                 nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
+                    
+class ViT(nn.Module):
+    def __init__(self, input_shape=(22, 1000), num_classes=4, num_head = 8, num_layers = 4, scaling = 1, patch_size = (2, 2), dim = 64):
+        super(ViT, self).__init__()
+        self.input_shape = input_shape
+        self.num_classes = num_classes
+        self.num_head = num_head
+        self.num_layers = num_layers
+        self.scaling = scaling
+        self.dim = dim
+        self.seq_len = input_shape[0]*input_shape[1]//np.prod(patch_size) + 1
+        self.patch_embedding = nn.Conv2d(1, self.dim, kernel_size=patch_size, stride=patch_size)
+        self.cls_token = nn.Parameter(torch.randn(1, 1, self.dim)*self.scaling)
+        self.projection = nn.Linear(self.dim, self.num_classes)
+        self.transformer = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=self.dim, nhead=self.num_head), num_layers=self.num_layers)
+        self.positions = nn.Parameter(torch.randn(self.seq_len, self.dim))
+        
+    def forward(self,x):
+        x = self.patch_embedding(x)
+        x = x.flatten(2).transpose(1, 2)
+        cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
+        x = torch.cat((cls_tokens, x), dim=1)
+        x = x + self.positions
+        x = x.permute(1, 0, 2)
+        x = self.transformer(x)
+        x = x.permute(1, 0, 2)
+        x = x[:, 0, :]
+        x = self.projection(x)
+        return x
