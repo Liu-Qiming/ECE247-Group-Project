@@ -1,11 +1,12 @@
 import torch
 from torch import nn
 from tqdm import tqdm
+import copy
 
 def train(model, train_loader, valid_loader, criterion, optimizer, device, print_every=10, epochs=20, patience=20):
     cur_val_max = float('inf')
     tol = 0
-
+    best_model = None
     for epoch in tqdm(range(epochs)):
         model.train()
         running_loss = 0.0
@@ -35,12 +36,14 @@ def train(model, train_loader, valid_loader, criterion, optimizer, device, print
             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%')
 
         if cur_val_mean_loss < cur_val_max:
+            best_model = copy.deepcopy(model)
             cur_val_max = cur_val_mean_loss
             tol = 0
         else:
             tol += 1
             if tol == patience:
                 print('Early stopping!')
+                model.load_state_dict(best_model.state_dict())
                 break
 
 def evaluate(model, test_loader, device):
