@@ -17,7 +17,6 @@ else:
     device = torch.device('cpu')
     
 data_path = path.join(os.getcwd(), 'project_data/')
-seed_everything()
 
 def train_ray_Ultimateconfig(config):
     # dataset
