@@ -31,8 +31,8 @@ def train(model, train_loader, valid_loader, criterion, optimizer, device, write
         cur_val_mean_loss = val_loss / len(valid_loader.dataset)
         avg_loss = running_loss / len(train_loader.dataset)
         val_accuracy = evaluate(model, valid_loader, device)
-        
-        if (epoch + 1) % print_every == 0: 
+
+        if (epoch + 1) % print_every == 0:
             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%')
 
         writer.add_scalar('Loss/train', avg_loss, epoch)
