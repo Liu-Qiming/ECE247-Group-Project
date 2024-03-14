@@ -1,6 +1,7 @@
 # project specific
 project_data/
 __MACOSX/
+runs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
