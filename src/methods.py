@@ -2,16 +2,12 @@ import torch
 from torch import nn
 from tqdm import tqdm
 import copy
-
-def train(model, train_loader, valid_loader, criterion, optimizer, device, writer, print_every=10, epochs=20, patience=20):
-    cur_val_max = float('inf')
-    tol = 0
-    best_model = None
     
 from torch.utils.tensorboard import SummaryWriter
 def train(model, train_loader, valid_loader, criterion, optimizer, device, writer, print_every=10, epochs=20, patience=20):
     cur_val_max = float('inf')
     tol = 0
+    best_model = None
     for epoch in tqdm(range(epochs)):
         model.train()
         running_loss = 0.0
