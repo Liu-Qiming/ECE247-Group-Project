@@ -1,7 +1,8 @@
 # project specific
 project_data/
 __MACOSX/
-
+runs/
+src/__pycache__/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
