@@ -188,7 +188,95 @@ class UltimateConvNet(nn.Module):
                 nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
-                    
+            elif isinstance(module, nn.LSTM):
+                for name, param in module.named_parameters():
+                    if 'weight_ih' in name:
+                        nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
+                    elif 'weight_hh' in name:
+                        nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
+                    elif 'bias' in name:
+                        param.data.fill_(0)
+            elif isinstance(module, nn.Linear):
+                nn.init.kaiming_normal_(module.weight, mode='fan_in', nonlinearity='relu')
+                nn.init.constant_(module.bias, 0)
+
+class RNN(nn.Module):
+    def __init__(self, input_shape=(22, 1000), hidden_size=64, num_layers=2, n_classes=4, **kwargs):
+        super(RNN, self).__init__()
+        input_size, _ = input_shape
+        self.hidden_size = hidden_size
+        self.num_layer = num_layers
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True, **kwargs)
+        self.fc = nn.Linear(hidden_size, n_classes)
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1) # x is in batch, n_features, seq_len
+        out, hn = self.rnn(x)  # (batch, seq_len, n_features)
+        out = self.fc(out[:, -1, :]) # obtain the last output of the model
+        return out
+
+class EEGNet_Modified(nn.Module):
+    '''
+        hyperparameters s2:
+        self, n_temporal_filters=8, 
+        kernel_length=64, pool_size=8, 
+        depth_multiplier=4, in_channels=22, dropout=0.3
+    '''
+    ''' test acc 0.74041
+        self, in_samples=1000, n_temporal_filters=8, 
+        kernel_length=64, pool_size=8,
+        depth_multiplier=4, in_channels=22, dropout=0.4
+    '''
+
+    def __init__(
+        self, in_samples=1000, n_temporal_filters=8, 
+        kernel_length=64, pool_size=8,
+        depth_multiplier=4, in_channels=22, dropout=0.4):
+
+        super().__init__()
+
+        self.input_shape = (in_channels, in_samples)
+        kernel_length2 = 16
+        Filter_Num_2 = depth_multiplier*n_temporal_filters
+
+        self.temporal_conv1 = nn.Conv2d(1, n_temporal_filters, (1,kernel_length), padding='same', bias=False)
+        self.batch_norm_1 = nn.BatchNorm2d(n_temporal_filters)
+        self.depth_wise_conv = nn.Conv2d(n_temporal_filters, Filter_Num_2, (in_channels, 1), bias=False, groups=n_temporal_filters)
+        self.batch_norm_2 = nn.BatchNorm2d(Filter_Num_2)
+        self.elu = nn.ELU()
+        self.average_pool1 = nn.AvgPool2d((1, pool_size), stride=(1, pool_size))
+        self.average_pool2 = nn.AvgPool2d((1, pool_size), stride=(1, pool_size))
+        self.dropout1 = nn.Dropout(p=dropout)
+        self.dropout2 = nn.Dropout(p=dropout)
+        self.spatial_conv1 = nn.Conv2d(Filter_Num_2, Filter_Num_2, (1, kernel_length2), padding='same', bias=False)
+        self.batch_norm_3 = nn.BatchNorm2d(Filter_Num_2)
+
+        #NOTE: remove this if used as part of ATCNet, keep this if used as EGGNet
+        self.temp_linear = nn.LazyLinear(4)
+
+    def forward(self, x):
+        # x should be (batch_size, 1, channels, time)
+        h = x
+        h = h.view(-1, 1, self.input_shape[0], self.input_shape[1])
+        h = self.temporal_conv1(h)
+        h = self.batch_norm_1(h)
+        h = self.depth_wise_conv(h)
+        h = self.batch_norm_2(h)
+        h = self.elu(h)
+        h = self.average_pool1(h)
+        h = self.dropout1(h)
+        h = self.spatial_conv1(h)
+        h = self.batch_norm_3(h)
+        h = self.elu(h)
+        h = self.average_pool2(h)
+        h = self.dropout2(h)
+
+        #NOTE: remove this if used as part of ATCNet, keep this if used as EGGNet
+        h=h.view(h.shape[0], -1)
+        h=self.temp_linear(h)
+
+        return h #(64, 32, 1, 15)
+    
 class ViT(nn.Module):
     def __init__(self, input_shape=(22, 1000), num_classes=4, num_head = 8, num_layers = 4, scaling = 1, patch_size = (2, 2), dim = 64):
         super(ViT, self).__init__()
