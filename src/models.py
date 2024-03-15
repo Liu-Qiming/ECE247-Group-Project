@@ -215,49 +215,38 @@ class RNN(nn.Module):
         out = self.fc(out[:, -1, :]) # obtain the last output of the model
         return out
 
-class EEGNet_Modified(nn.Module):
-    '''
-        hyperparameters s2:
-        self, n_temporal_filters=8, 
-        kernel_length=64, pool_size=8, 
-        depth_multiplier=4, in_channels=22, dropout=0.3
-    '''
-    ''' test acc 0.74041
-        self, in_samples=1000, n_temporal_filters=8, 
-        kernel_length=64, pool_size=8,
-        depth_multiplier=4, in_channels=22, dropout=0.4
-    '''
-
+class EEGNet(nn.Module):
     def __init__(
-        self, in_samples=1000, n_temporal_filters=8, 
-        kernel_length=64, pool_size=8,
-        depth_multiplier=4, in_channels=22, dropout=0.4):
+        self, input_shape=(1, 22, 1000)):
+        super(EEGNet, self).__init__()
+        
+        self.input_shape = input_shape
 
-        super().__init__()
-
-        self.input_shape = (in_channels, in_samples)
-        kernel_length2 = 16
-        Filter_Num_2 = depth_multiplier*n_temporal_filters
-
-        self.temporal_conv1 = nn.Conv2d(1, n_temporal_filters, (1,kernel_length), padding='same', bias=False)
-        self.batch_norm_1 = nn.BatchNorm2d(n_temporal_filters)
-        self.depth_wise_conv = nn.Conv2d(n_temporal_filters, Filter_Num_2, (in_channels, 1), bias=False, groups=n_temporal_filters)
-        self.batch_norm_2 = nn.BatchNorm2d(Filter_Num_2)
+        
+        self.temporal_conv1 = nn.Conv2d(1, 8, kernel_size=(1,64))
+        self.batch_norm_1 = nn.BatchNorm2d(8)
+        
+        self.depth_wise_conv = nn.Conv2d(8, 32, (22, 1), groups=8)
+        self.batch_norm_2 = nn.BatchNorm2d(32)
         self.elu = nn.ELU()
-        self.average_pool1 = nn.AvgPool2d((1, pool_size), stride=(1, pool_size))
-        self.average_pool2 = nn.AvgPool2d((1, pool_size), stride=(1, pool_size))
-        self.dropout1 = nn.Dropout(p=dropout)
-        self.dropout2 = nn.Dropout(p=dropout)
-        self.spatial_conv1 = nn.Conv2d(Filter_Num_2, Filter_Num_2, (1, kernel_length2), padding='same', bias=False)
-        self.batch_norm_3 = nn.BatchNorm2d(Filter_Num_2)
-
+        
+        self.average_pool1 = nn.AvgPool2d((1, 8), stride=(1, 8))
+        self.dropout1 = nn.Dropout(DROPOUT)
+        
+        self.spatial_conv1 = nn.Conv2d(32, 32, kernel_size = (1, 16))
+        self.batch_norm_3 = nn.BatchNorm2d(32)
+        self.elu = nn.ELU()
+        
+        self.average_pool2 = nn.AvgPool2d((1, 8), stride=(1, 8))
+        self.dropout2 = nn.Dropout(DROPOUT)
+        
+        
         #NOTE: remove this if used as part of ATCNet, keep this if used as EGGNet
         self.temp_linear = nn.LazyLinear(4)
 
     def forward(self, x):
         # x should be (batch_size, 1, channels, time)
         h = x
-        h = h.view(-1, 1, self.input_shape[0], self.input_shape[1])
         h = self.temporal_conv1(h)
         h = self.batch_norm_1(h)
         h = self.depth_wise_conv(h)
@@ -270,8 +259,6 @@ class EEGNet_Modified(nn.Module):
         h = self.elu(h)
         h = self.average_pool2(h)
         h = self.dropout2(h)
-
-        #NOTE: remove this if used as part of ATCNet, keep this if used as EGGNet
         h=h.view(h.shape[0], -1)
         h=self.temp_linear(h)
 
