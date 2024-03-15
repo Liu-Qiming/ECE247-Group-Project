@@ -222,7 +222,6 @@ class EEGNet(nn.Module):
         
         self.input_shape = input_shape
 
-        
         self.temporal_conv1 = nn.Conv2d(1, 8, kernel_size=(1,64))
         self.batch_norm_1 = nn.BatchNorm2d(8)
         
