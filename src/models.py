@@ -226,14 +226,14 @@ class EEGNet(nn.Module):
         super().__init__()
         
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(1, 8, kernel_size=(1,64), padding='zero'),
+            nn.Conv2d(1, 8, kernel_size=(1,64), padding=(0,31)),
             nn.BatchNorm2d(8),
             nn.Conv2d(8, 32, kernel_size=(22, 1), groups=8),
             nn.BatchNorm2d(32),
             nn.ELU(),
             nn.AvgPool2d((1, 8), stride=(1, 8)),
             nn.Dropout(DROPOUT_EEG),
-            nn.Conv2d(32, 32, kernel_size=(1, 16), padding='zero'),
+            nn.Conv2d(32, 32, kernel_size=(1, 16), padding=(0, 7)),
             nn.BatchNorm2d(32),
             nn.ELU(),
             nn.AvgPool2d((1, 8), stride=(1, 8)),
