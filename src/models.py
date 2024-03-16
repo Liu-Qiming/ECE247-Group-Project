@@ -3,6 +3,7 @@ from torch import nn
 import numpy as np
 
 DROPOUT = 0.5
+DROPOUT_EEG = 0.4
 class ConvNet(nn.Module):
     def __init__(self, input_shape=(1, 22, 1000)):
         super(ConvNet, self).__init__()
@@ -222,46 +223,49 @@ class EEGNet(nn.Module):
         
         self.input_shape = input_shape
 
-        self.temporal_conv1 = nn.Conv2d(1, 8, kernel_size=(1,64))
-        self.batch_norm_1 = nn.BatchNorm2d(8)
+        super().__init__()
         
-        self.depth_wise_conv = nn.Conv2d(8, 32, (22, 1), groups=8)
-        self.batch_norm_2 = nn.BatchNorm2d(32)
-        self.elu = nn.ELU()
-        
-        self.average_pool1 = nn.AvgPool2d((1, 8), stride=(1, 8))
-        self.dropout1 = nn.Dropout(DROPOUT)
-        
-        self.spatial_conv1 = nn.Conv2d(32, 32, kernel_size = (1, 16))
-        self.batch_norm_3 = nn.BatchNorm2d(32)
-        self.elu = nn.ELU()
-        
-        self.average_pool2 = nn.AvgPool2d((1, 8), stride=(1, 8))
-        self.dropout2 = nn.Dropout(DROPOUT)
-        
-        
-        #NOTE: remove this if used as part of ATCNet, keep this if used as EGGNet
-        self.temp_linear = nn.LazyLinear(4)
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(1, 8, kernel_size=(1,64), padding='zero'),
+            nn.BatchNorm2d(8),
+            nn.Conv2d(8, 32, kernel_size=(22, 1), groups=8),
+            nn.BatchNorm2d(32),
+            nn.ELU(),
+            nn.AvgPool2d((1, 8), stride=(1, 8)),
+            nn.Dropout(DROPOUT_EEG),
+            nn.Conv2d(32, 32, kernel_size=(1, 16), padding='zero'),
+            nn.BatchNorm2d(32),
+            nn.ELU(),
+            nn.AvgPool2d((1, 8), stride=(1, 8)),
+            nn.Dropout(DROPOUT_EEG),
+            nn.Flatten()
+        )
+        self.flattened_feature_nums = 480
+        self.fc_layers = nn.Linear(self.flattened_feature_nums,4)
 
     def forward(self, x):
-        # x should be (batch_size, 1, channels, time)
-        h = x
-        h = self.temporal_conv1(h)
-        h = self.batch_norm_1(h)
-        h = self.depth_wise_conv(h)
-        h = self.batch_norm_2(h)
-        h = self.elu(h)
-        h = self.average_pool1(h)
-        h = self.dropout1(h)
-        h = self.spatial_conv1(h)
-        h = self.batch_norm_3(h)
-        h = self.elu(h)
-        h = self.average_pool2(h)
-        h = self.dropout2(h)
-        h=h.view(h.shape[0], -1)
-        h=self.temp_linear(h)
+        h = self.conv_layers(x)
+        h = self.fc_layers(h)
 
-        return h #(64, 32, 1, 15)
+        return h
+    
+    def _initialize_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Conv1d):
+                nn.init.kaiming_normal_(module.weight, mode='fan_in', nonlinearity='relu')
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0)
+            elif isinstance(module, nn.LSTM):
+                for name, param in module.named_parameters():
+                    if 'weight_ih' in name:
+                        nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
+                    elif 'weight_hh' in name:
+                        nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
+                    elif 'bias' in name:
+                        param.data.fill_(0)
+            elif isinstance(module, nn.LazyLinear):
+                nn.init.kaiming_normal_(module.weight, mode='fan_in', nonlinearity='relu')
+                nn.init.constant_(module.bias, 0)
     
 class ViT(nn.Module):
     def __init__(self, input_shape=(22, 1000), num_classes=4, num_head = 8, num_layers = 4, scaling = 1, patch_size = (2, 2), dim = 64):
